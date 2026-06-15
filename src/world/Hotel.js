@@ -437,11 +437,8 @@ export class Hotel {
       g.add(tube);
       this.corridorTubes.push(tube);
 
-      // Гул лампы — пространственный
-      const hum = this.audio.attach('lampHum', tube, {
-        loop: true, volume: 0.06, refDistance: 0.6, rolloff: 2.5, maxDistance: 6, occludable: true
-      });
-      tube.userData.hum = hum;
+      // Гул лампы — отключён (мешал пользователю). Меш остаётся декоративным.
+      tube.userData.hum = null;
     }
     {
       const hemi = new THREE.HemisphereLight(0xfff2d8, 0x1c1812, 1.6);

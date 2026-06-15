@@ -142,8 +142,65 @@
   }
   #move-status.walking { color: #6f6; }
 
-  /* Виртуальный джойстик для тач-управления */
-  #joystick {
+  /* Большие кнопки движения — для тех кому неудобно WASD */
+  #move-pad {
+    position: fixed;
+    left: 30px; bottom: 30px;
+    display: grid;
+    grid-template-columns: 64px 64px 64px;
+    grid-template-rows: 64px 64px;
+    gap: 6px;
+    z-index: 25;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #move-pad .btn {
+    background: rgba(20,20,20,0.7);
+    border: 2px solid rgba(255,255,255,0.35);
+    border-radius: 12px;
+    color: rgba(255,255,255,0.85);
+    font: bold 28px sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+    transition: all 80ms;
+  }
+  #move-pad .btn:active, #move-pad .btn.active {
+    background: rgba(255,180,80,0.9);
+    border-color: #fff;
+    color: #000;
+    transform: scale(0.95);
+  }
+  #move-pad .ph { background: transparent; border: none; pointer-events: none; }
+  #pad-up    { grid-column: 2; grid-row: 1; }
+  #pad-left  { grid-column: 1; grid-row: 2; }
+  #pad-down  { grid-column: 2; grid-row: 2; }
+  #pad-right { grid-column: 3; grid-row: 2; }
+
+  /* Большая кнопка взаимодействия */
+  #interact-btn {
+    position: fixed;
+    right: 30px; bottom: 50px;
+    width: 90px; height: 90px;
+    background: rgba(20,20,20,0.7);
+    border: 2px solid rgba(255,255,255,0.35);
+    border-radius: 50%;
+    color: rgba(255,255,255,0.85);
+    font: bold 12px sans-serif;
+    letter-spacing: 0.15em;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    z-index: 25;
+    transition: all 100ms;
+  }
+  #interact-btn.hover {
+    background: rgba(255,180,80,0.9);
+    border-color: #fff;
+    color: #000;
+  }
     position: fixed;
     left: 30px; bottom: 30px;
     width: 130px; height: 130px;
@@ -233,8 +290,17 @@
   </div>
   <div id="move-status">СТОИТ</div>
 
-  <div id="joystick"><div id="joystick-thumb"></div></div>
-  <div id="touch-action">ВЗЯТЬ</div>
+  <!-- Большие кнопки движения для игры мышкой/тапом -->
+  <div id="move-pad">
+    <div class="ph"></div>
+    <div id="pad-up"    class="btn">↑</div>
+    <div class="ph"></div>
+    <div id="pad-left"  class="btn">←</div>
+    <div id="pad-down"  class="btn">↓</div>
+    <div id="pad-right" class="btn">→</div>
+  </div>
+
+  <div id="interact-btn">ВЗЯТЬ</div>
 
   <script type="module" src="./src/main.js"></script>
 </body>

@@ -36,23 +36,19 @@ export class ActManager {
     this._horrorTarget = 0.0;       // куда мы хотим вытянуть пост-обработку
     this._horrorCurrent = 0.0;
 
-    // Глобальный «room tone» — фоновый гул вентиляции
+    // Глобальный «room tone» — фоновый гул вентиляции (очень тихий)
     this.roomTone = this.audio.attach('roomTone', this.player.root, {
-      loop: true, volume: 0.18, refDistance: 1, rolloff: 0.0, maxDistance: 50
+      loop: true, volume: 0.05, refDistance: 1, rolloff: 0.0, maxDistance: 50
     });
     try { this.roomTone.play(); } catch(_) {}
 
-    // Сердцебиение (для финала)
+    // Сердцебиение и дрон — НЕ играют автоматически. Стартуют только в актах 3-4.
     this.heartbeat = this.audio.attach('heartbeat', this.player.root, {
       loop: true, volume: 0, refDistance: 1, rolloff: 0.0, maxDistance: 5
     });
-    try { this.heartbeat.play(); } catch(_) {}
-
-    // Низкий дрон финала (поверх ТВ)
     this.finalDrone = this.audio.attach('deepDrone', this.player.root, {
       loop: true, volume: 0, refDistance: 1, rolloff: 0.0, maxDistance: 50
     });
-    try { this.finalDrone.play(); } catch(_) {}
 
     // Состояние, которое запоминаем
     this.flags = {
@@ -375,7 +371,7 @@ export class ActManager {
     if (this.hotel.foodBag) this.hotel.foodBag.visible = false;
 
     // Включить медленное сердцебиение — еле-еле
-    try { this.heartbeat.setVolume(0.20); } catch(_) {}
+    try { if (!this.heartbeat.isPlaying) this.heartbeat.play(); this.heartbeat.setVolume(0.20); } catch(_) {}
   }
 
   _tickA3LobbyEmpty(dt, p) {
@@ -397,7 +393,7 @@ export class ActManager {
   _enter_A4_ELEVATOR() {
     this.act = 4;
     this._horrorTarget = 0.70;
-    try { this.heartbeat.setVolume(0.45); } catch(_) {}
+    try { if (!this.heartbeat.isPlaying) this.heartbeat.play(); this.heartbeat.setVolume(0.45); } catch(_) {}
 
     // На середине поездки — короткий полный блэкаут света кабины
     setTimeout(() => {
@@ -449,8 +445,8 @@ export class ActManager {
     }, 800);
 
     // Звук тяжёлого низкого дрона нарастает
-    try { this.finalDrone.setVolume(0.45); } catch(_) {}
-    try { this.heartbeat.setVolume(0.55); } catch(_) {}
+    try { if (!this.finalDrone.isPlaying) this.finalDrone.play(); this.finalDrone.setVolume(0.45); } catch(_) {}
+    try { if (!this.heartbeat.isPlaying) this.heartbeat.play();  this.heartbeat.setVolume(0.55); } catch(_) {}
 
     // Глюк ТВ заранее
     setTimeout(() => this.tv.setGlitch(true), 1200);
@@ -465,8 +461,8 @@ export class ActManager {
 
   _enter_A4_ROOM() {
     this._horrorTarget = 0.95;
-    try { this.finalDrone.setVolume(0.75); } catch(_) {}
-    try { this.heartbeat.setVolume(0.7); } catch(_) {}
+    try { if (!this.finalDrone.isPlaying) this.finalDrone.play(); this.finalDrone.setVolume(0.75); } catch(_) {}
+    try { if (!this.heartbeat.isPlaying) this.heartbeat.play();  this.heartbeat.setVolume(0.7); } catch(_) {}
 
     // Гасим лампу у кровати и оставляем только цвет ТВ
     if (this.hotel.bedLight) {

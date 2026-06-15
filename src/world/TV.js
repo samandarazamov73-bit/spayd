@@ -77,9 +77,9 @@ export class TV {
 
     // Звук ТВ
     this.tvHum = this.audio.attach('tvHum', this.group, {
-      loop: true, volume: 0, refDistance: 0.6, rolloff: 1.8, maxDistance: 6, occludable: true
+      loop: true, volume: 0, refDistance: 0.6, rolloff: 1.8, maxDistance: 4
     });
-    try { this.tvHum.play(); } catch(_) {}
+    // tvHum НЕ играет автоматически — стартует только при включении ТВ.
 
     // Сразу нарисуем «выключенный» экран
     this._drawOff();
@@ -91,7 +91,8 @@ export class TV {
     if (this.on) return;
     this.on = true;
     this.screen.material = this.screenMatOn;
-    try { this.tvHum.setVolume(0.10); } catch(_) {}
+    try { this.tvHum.play(); } catch(_) {}
+    try { this.tvHum.setVolume(0.05); } catch(_) {}
   }
 
   off() {

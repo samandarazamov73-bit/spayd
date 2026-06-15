@@ -93,21 +93,8 @@ export class Player {
   }
 
   _playFootstep() {
-    const now = performance.now();
-    if (now - this._lastStepTime < 180) return;
-    this._lastStepTime = now;
-    // Источник шага — у ног игрока. Мини-объект, удаляется автоматически.
-    const node = new THREE.Object3D();
-    node.position.copy(this.root.position);
-    node.position.y -= this.eyeHeight - 0.1;
-    this.scene.add(node);
-    this.audio.playOnce(this._stepBuf, node, {
-      volume: 0.35 + Math.random() * 0.15,
-      refDistance: 1.0,
-      rolloff: 1.4,
-      maxDistance: 14
-    });
-    setTimeout(() => this.scene.remove(node), 600);
+    // Шаги отключены — пользователю мешали постоянные звуки.
+    return;
   }
 
   /**

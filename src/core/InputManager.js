@@ -97,6 +97,34 @@ export class InputManager {
 
     // Контекстное меню — отключаем, чтобы ПКМ не мешала
     this.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // === Кнопки на экране (для тех, кому неудобно WASD) ===
+    // Удерживаемая кнопка эмулирует нажатие соответствующего кода.
+    const wirePadButton = (id, code) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const press   = (e) => { e.preventDefault(); this.keys.add(code); el.classList.add('active'); };
+      const release = (e) => { e.preventDefault(); this.keys.delete(code); el.classList.remove('active'); };
+      el.addEventListener('mousedown',   press);
+      el.addEventListener('mouseup',     release);
+      el.addEventListener('mouseleave',  release);
+      el.addEventListener('touchstart',  press,   { passive: false });
+      el.addEventListener('touchend',    release, { passive: false });
+      el.addEventListener('touchcancel', release, { passive: false });
+    };
+    wirePadButton('pad-up',    'KeyW');
+    wirePadButton('pad-down',  'KeyS');
+    wirePadButton('pad-left',  'KeyA');
+    wirePadButton('pad-right', 'KeyD');
+
+    // Кнопка взаимодействия
+    const interactBtn = document.getElementById('interact-btn');
+    if (interactBtn) {
+      const fire = (e) => { e.preventDefault(); this.click = true; };
+      interactBtn.addEventListener('mousedown',  fire);
+      interactBtn.addEventListener('touchstart', fire, { passive: false });
+    }
+    this._interactBtnEl = interactBtn;
   }
 
   requestLock() {

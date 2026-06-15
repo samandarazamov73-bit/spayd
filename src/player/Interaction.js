@@ -63,6 +63,13 @@ export class Interaction {
     if (hovered) this.crosshair.classList.add('hover');
     else this.crosshair.classList.remove('hover');
 
+    // Подсветка экранной кнопки взаимодействия
+    const btn = document.getElementById('interact-btn');
+    if (btn) {
+      if (hovered) btn.classList.add('hover');
+      else btn.classList.remove('hover');
+    }
+
     if (click && hovered && typeof hovered.userData.onInteract === 'function') {
       hovered.userData.onInteract(player);
     }
