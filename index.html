@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider-Man 2D | The Amazing Adventure</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- INTRO SCREEN -->
+    <div id="introScreen" class="screen active">
+        <div class="intro-content">
+            <div class="spider-logo">🕷️</div>
+            <h1 class="title-main">THE AMAZING</h1>
+            <h1 class="title-sub">SPIDER-MAN</h1>
+            <p class="title-desc">2D Adventure</p>
+            <div class="story-intro">
+                <p>Нью-Йорк под угрозой. Зелёный Гоблин похитил MJ.<br>
+                Только Человек-Паук может спасти её!</p>
+            </div>
+            <button class="btn-start" onclick="startGame()">▶ НАЧАТЬ ИГРУ</button>
+            <div class="controls-hint">
+                <span>← → Движение</span>
+                <span>↑ / SPACE Прыжок</span>
+                <span>Z Паутина</span>
+                <span>X Удар</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIALOGUE SCREEN -->
+    <div id="dialogueBox" class="dialogue-box hidden">
+        <div class="dialogue-avatar" id="dialogueAvatar">🕷️</div>
+        <div class="dialogue-content">
+            <div class="dialogue-name" id="dialogueName">Spider-Man</div>
+            <div class="dialogue-text" id="dialogueText"></div>
+        </div>
+        <button class="dialogue-next" onclick="nextDialogue()">▶</button>
+    </div>
+
+    <!-- GAME UI -->
+    <div id="gameUI" class="game-ui hidden">
+        <div class="ui-left">
+            <div class="health-bar">
+                <span>❤️ HP</span>
+                <div class="bar-outer"><div class="bar-inner" id="hpBar"></div></div>
+                <span id="hpText">100</span>
+            </div>
+            <div class="health-bar">
+                <span>🕸️ WEB</span>
+                <div class="bar-outer"><div class="bar-inner web" id="webBar"></div></div>
+                <span id="webText">100</span>
+            </div>
+        </div>
+        <div class="ui-center">
+            <div class="level-name" id="levelName">Глава 1: Начало</div>
+        </div>
+        <div class="ui-right">
+            <div class="score">⭐ <span id="scoreText">0</span></div>
+            <div class="enemies-left">👿 <span id="enemiesText">0</span></div>
+        </div>
+    </div>
+
+    <!-- CANVAS -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- GAME OVER -->
+    <div id="gameOverScreen" class="screen hidden">
+        <div class="go-content">
+            <div class="go-emoji">💀</div>
+            <h2>GAME OVER</h2>
+            <p id="goMessage">Нью-Йорк проиграл...</p>
+            <button class="btn-start" onclick="restartGame()">↺ ЗАНОВО</button>
+        </div>
+    </div>
+
+    <!-- WIN SCREEN -->
+    <div id="winScreen" class="screen hidden">
+        <div class="go-content">
+            <div class="go-emoji">🕷️</div>
+            <h2>ПОБЕДА!</h2>
+            <p>Нью-Йорк спасён! MJ в безопасности!<br>Зелёный Гоблин повержен!</p>
+            <div class="win-score">Очки: <span id="finalScore">0</span></div>
+            <button class="btn-start" onclick="restartGame()">↺ ИГРАТЬ СНОВА</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
