@@ -1,31 +1,22 @@
 import * as THREE from 'three';
 
 /**
- * TV
- * --
- * Телевизор с экраном, который можно «включить» — на экране запускается
- * VideoTexture. Свет от экрана (PointLight) подсвечивает комнату:
- *  - интенсивность модулируется средней яркостью текущего кадра
- *    (один раз в N кадров мы рендерим видео в маленький canvas 32×32
- *     и считаем средний цвет);
- *  - тени от мебели реальные, потому что у света castShadow=true.
+ * TV (lite)
+ * ---------
+ * Лёгкий ТВ с процедурной анимацией на canvas (никаких видеофайлов,
+ * никаких CORS-проблем). Свет от экрана модулируется средней яркостью
+ * текущего кадра.
  *
- * Состояния:
- *  - off / on / glitched
- *
- * `setGlitch(true)` — финальный режим: видео «зависает» на текущем кадре,
- * звук подменяется на низкий гул, свет начинает мерцать.
+ * setGlitch(true) — финальный режим: картинка «зависает» на текущем
+ * кадре, цвет уходит в красный, звук подменяется на низкий гул.
  */
 export class TV {
-  constructor({ scene, audio, materials, position, facing = 'west', width = 1.0, height = 0.58, interaction }) {
+  constructor({ scene, audio, materials, position, facing = 'east',
+                width = 1.0, height = 0.58, interaction }) {
     this.scene = scene;
     this.audio = audio;
     this.M = materials;
-    this.facing = facing;
-    this.width = width;
-    this.height = height;
 
-    // Корпус ТВ
     this.group = new THREE.Group();
     this.group.position.copy(position);
     if (facing === 'west')  this.group.rotation.y =  Math.PI/2;
@@ -33,19 +24,29 @@ export class TV {
     if (facing === 'north') this.group.rotation.y =  Math.PI;
     this.scene.add(this.group);
 
+    // Корпус
     const bezel = new THREE.Mesh(
       new THREE.BoxGeometry(width + 0.06, height + 0.06, 0.06),
       this.M.blackPlastic
     );
-    bezel.castShadow = true;
-    bezel.receiveShadow = true;
     this.group.add(bezel);
 
-    // Экран — пока чёрный, материал заменим при включении
-    this.screenMat = new THREE.MeshBasicMaterial({ color: 0x080808 });
+    // Canvas для процедурной анимации
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = 256;
+    this.canvas.height = 144;
+    this.ctx = this.canvas.getContext('2d');
+    this.canvasTex = new THREE.CanvasTexture(this.canvas);
+    this.canvasTex.colorSpace = THREE.SRGBColorSpace;
+
+    this.screenMatOff = new THREE.MeshBasicMaterial({ color: 0x080808 });
+    this.screenMatOn  = new THREE.MeshBasicMaterial({
+      map: this.canvasTex, toneMapped: false
+    });
+
     const screen = new THREE.Mesh(
       new THREE.PlaneGeometry(width, height),
-      this.screenMat
+      this.screenMatOff
     );
     screen.position.z = 0.031;
     screen.userData.interactable = true;
@@ -55,7 +56,7 @@ export class TV {
     this.screen = screen;
     if (interaction) interaction.register(screen);
 
-    // Подставка-стойка ТВ (декор)
+    // Подставка
     const stand = new THREE.Mesh(
       new THREE.BoxGeometry(0.20, 0.06, 0.10),
       this.M.blackPlastic
@@ -63,129 +64,129 @@ export class TV {
     stand.position.set(0, -height/2 - 0.03, 0);
     this.group.add(stand);
 
-    // PointLight от экрана
-    this.light = new THREE.PointLight(0x88a0ff, 0.0, 7, 2.0);
-    this.light.castShadow = true;
-    this.light.shadow.mapSize.set(512, 512);
-    this.light.shadow.bias = -0.0008;
-    this.light.position.set(0, 0, 0.5);   // чуть впереди экрана
+    // Свет от экрана
+    this.light = new THREE.PointLight(0x88a0ff, 0.0, 8, 2.0);
+    this.light.position.set(0, 0, 0.5);
     this.group.add(this.light);
-
-    // Видео-элемент
-    this.video = document.createElement('video');
-    this.video.crossOrigin = 'anonymous';
-    this.video.loop = true;
-    this.video.muted = false;
-    this.video.playsInline = true;
-    // CORS-friendly публичное видео (Mozilla MDN sample)
-    this.video.src = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
-    this.video.preload = 'auto';
-    this.videoTex = null;
-
-    // Маленький канвас для дискретизации яркости кадра
-    this._lumCanvas = document.createElement('canvas');
-    this._lumCanvas.width = this._lumCanvas.height = 16;
-    this._lumCtx = this._lumCanvas.getContext('2d', { willReadFrequently: true });
 
     // Состояние
     this.on = false;
     this.glitched = false;
-    this._lumSampleAccum = 0;
-    this._lastAvgColor = new THREE.Color(0xffffff);
+    this.frameTime = 0;
+    this._avgColor = new THREE.Color(0xffffff);
 
-    // Звук ТВ — пространственный, hum + видео-аудио (видео не играем через WebAudio,
-    // но прибавим короткий tvHum для CRT-присутствия)
+    // Звук ТВ
     this.tvHum = this.audio.attach('tvHum', this.group, {
       loop: true, volume: 0, refDistance: 0.6, rolloff: 1.8, maxDistance: 6, occludable: true
     });
     try { this.tvHum.play(); } catch(_) {}
+
+    // Сразу нарисуем «выключенный» экран
+    this._drawOff();
   }
 
-  toggle() {
-    if (this.on) this.off(); else this.turnOn();
-  }
+  toggle() { if (this.on) this.off(); else this.turnOn(); }
 
   turnOn() {
     if (this.on) return;
     this.on = true;
-    this.video.muted = false;
-    this.video.volume = 0.6;
-    this.video.play().catch((e) => {
-      // некоторые браузеры требуют user gesture — у нас он есть (клик)
-      console.warn('[TV] video.play() error', e);
-    });
-
-    this.videoTex = new THREE.VideoTexture(this.video);
-    this.videoTex.colorSpace = THREE.SRGBColorSpace;
-    this.videoTex.minFilter = THREE.LinearFilter;
-    this.videoTex.magFilter = THREE.LinearFilter;
-
-    this.screen.material = new THREE.MeshBasicMaterial({
-      map: this.videoTex,
-      toneMapped: false   // экран эмиссивный
-    });
-
+    this.screen.material = this.screenMatOn;
     try { this.tvHum.setVolume(0.10); } catch(_) {}
   }
 
   off() {
     if (!this.on) return;
     this.on = false;
-    this.video.pause();
-    this.screen.material = new THREE.MeshBasicMaterial({ color: 0x080808 });
+    this.screen.material = this.screenMatOff;
     this.light.intensity = 0;
     try { this.tvHum.setVolume(0); } catch(_) {}
   }
 
-  /** Финальный режим: «зависнуть» и превратить звук в низкий гул. */
   setGlitch(on) {
     this.glitched = on;
     if (on) {
-      this.video.pause();
-      this.video.muted = true;
-      // подменим аудио на deepDrone
       try { this.tvHum.stop(); } catch(_) {}
       this.deepDrone = this.audio.attach('deepDrone', this.group, {
-        loop: true, volume: 0.85, refDistance: 1.5, rolloff: 1.2, maxDistance: 30
+        loop: true, volume: 0.6, refDistance: 1.5, rolloff: 1.2, maxDistance: 30
       });
       try { this.deepDrone.play(); } catch(_) {}
     }
   }
 
+  _drawOff() {
+    const c = this.ctx, w = this.canvas.width, h = this.canvas.height;
+    c.fillStyle = '#080808';
+    c.fillRect(0, 0, w, h);
+    this.canvasTex.needsUpdate = true;
+  }
+
+  _drawFrame(dt) {
+    const c = this.ctx, w = this.canvas.width, h = this.canvas.height;
+    this.frameTime += dt;
+    const t = this.frameTime;
+
+    // «Старая плёнка»: горизонтальные движущиеся полосы + случайный шум +
+    // мерцающий свет/тень. Имитация старого кино.
+    const r = 60 + Math.sin(t * 0.7) * 30 + Math.cos(t * 1.3) * 20;
+    const g = 50 + Math.sin(t * 0.9 + 1) * 25;
+    const b = 40 + Math.cos(t * 0.5 + 2) * 35;
+
+    // Базовый градиент
+    const grd = c.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0,   `rgb(${r|0},${g|0},${b|0})`);
+    grd.addColorStop(0.5, `rgb(${(r*1.4)|0},${(g*1.4)|0},${(b*1.4)|0})`);
+    grd.addColorStop(1,   `rgb(${(r*0.6)|0},${(g*0.6)|0},${(b*0.6)|0})`);
+    c.fillStyle = grd;
+    c.fillRect(0, 0, w, h);
+
+    // «Силуэт»: пара тёмных движущихся форм
+    const x1 = w/2 + Math.sin(t * 0.3) * 40;
+    const y1 = h/2 + Math.cos(t * 0.2) * 20;
+    c.fillStyle = `rgba(0,0,0,0.4)`;
+    c.beginPath();
+    c.ellipse(x1, y1, 25, 35, 0, 0, Math.PI*2);
+    c.fill();
+    c.beginPath();
+    c.ellipse(x1 + 60, y1 + 10, 20, 30, 0, 0, Math.PI*2);
+    c.fill();
+
+    // Сканлайны
+    c.fillStyle = 'rgba(0,0,0,0.18)';
+    for (let y = 0; y < h; y += 2) c.fillRect(0, y, w, 1);
+
+    // Шум
+    const img = c.getImageData(0, 0, w, h);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const n = (Math.random() - 0.5) * 28;
+      img.data[i]   += n;
+      img.data[i+1] += n;
+      img.data[i+2] += n;
+    }
+    c.putImageData(img, 0, 0);
+
+    this.canvasTex.needsUpdate = true;
+
+    // Средний цвет — приближённо
+    this._avgColor.setRGB((r*1.0)/255, (g*1.0)/255, (b*1.0)/255);
+  }
+
   update(dt) {
     if (!this.on) return;
 
-    // Каждые ~80мс семплируем яркость кадра в 16×16 пикселях
-    this._lumSampleAccum += dt;
-    if (this._lumSampleAccum > 0.08 && this.video.readyState >= 2) {
-      this._lumSampleAccum = 0;
-      try {
-        this._lumCtx.drawImage(this.video, 0, 0, 16, 16);
-        const data = this._lumCtx.getImageData(0, 0, 16, 16).data;
-        let r = 0, g = 0, b = 0;
-        const N = data.length / 4;
-        for (let i = 0; i < data.length; i += 4) {
-          r += data[i]; g += data[i+1]; b += data[i+2];
-        }
-        r /= 255 * N; g /= 255 * N; b /= 255 * N;
-        this._lastAvgColor.setRGB(r, g, b);
-      } catch (_) { /* CORS sometimes — просто игнор */ }
-    }
-
-    // Свет от ТВ — масштабируем до реалистичных физических величин
-    const lum = 0.299 * this._lastAvgColor.r + 0.587 * this._lastAvgColor.g + 0.114 * this._lastAvgColor.b;
-    let intensity = (0.6 + lum * 2.4) * 12;     // ×12 чтобы попасть в физический диапазон
     if (this.glitched) {
-      // мерцание + дропы
-      const t = performance.now() * 0.001;
-      const flicker = (Math.sin(t * 41) * 0.5 + 0.5);
+      // зависшая картинка с мерцанием — НЕ перерисовываем canvas
+      const flicker = (Math.sin(performance.now() * 0.041) * 0.5 + 0.5);
       const dropout = (Math.random() < 0.04) ? 0.1 : 1.0;
-      intensity *= 0.4 + flicker * 0.6;
-      intensity *= dropout;
       this.light.color.setHex(0xff3030);
+      this.light.intensity = THREE.MathUtils.damp(
+        this.light.intensity, 6 * flicker * dropout, 8, dt
+      );
     } else {
-      this.light.color.copy(this._lastAvgColor);
+      this._drawFrame(dt);
+      const lum = 0.299 * this._avgColor.r + 0.587 * this._avgColor.g + 0.114 * this._avgColor.b;
+      const target = (0.5 + lum * 2.0) * 18;
+      this.light.color.copy(this._avgColor);
+      this.light.intensity = THREE.MathUtils.damp(this.light.intensity, target, 6, dt);
     }
-    this.light.intensity = THREE.MathUtils.damp(this.light.intensity, intensity, 8, dt);
   }
 }

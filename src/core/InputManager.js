@@ -1,9 +1,14 @@
 import * as THREE from 'three';
 
 /**
- * Менеджер ввода: клавиатура + Pointer Lock.
- * Поворот камеры реализован вручную через yaw/pitch + инерцию,
- * чтобы получить «весомое» ощущение головы.
+ * Менеджер ввода: клавиатура + Pointer Lock + drag-fallback.
+ *
+ * Если PointerLock не работает (Safari, sandboxed iframe, отказ браузера),
+ * автоматически включается режим «зажми ЛКМ и двигай мышь» для поворота
+ * камеры. WASD-движение работает в любом случае.
+ *
+ * Также блокируется браузерное поведение по умолчанию для WASD/стрелок,
+ * чтобы Cmd+A или Tab не выбивали фокус.
  */
 export class InputManager {
   constructor(domElement) {
@@ -11,41 +16,93 @@ export class InputManager {
     this.keys = new Set();
 
     this.locked = false;
+    this.dragging = false;        // активный fallback-drag режим
     this.mouse = { dx: 0, dy: 0 };
     this.click = false;
+    this._lastMouse = { x: 0, y: 0 };
 
-    this.sensitivity = 0.0022;
+    this.sensitivity = 0.0028;
+
+    const GAME_KEYS = new Set([
+      'KeyW','KeyA','KeyS','KeyD',
+      'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
+      'Space','ShiftLeft','ShiftRight'
+    ]);
 
     document.addEventListener('keydown', (e) => {
       this.keys.add(e.code);
-    });
+      if (GAME_KEYS.has(e.code)) e.preventDefault();
+    }, { passive: false });
+
     document.addEventListener('keyup', (e) => {
       this.keys.delete(e.code);
-    });
+      if (GAME_KEYS.has(e.code)) e.preventDefault();
+    }, { passive: false });
 
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.domElement;
     });
 
+    // === Pointer Lock путь ===
     this.domElement.addEventListener('mousemove', (e) => {
-      if (!this.locked) return;
-      this.mouse.dx += e.movementX;
-      this.mouse.dy += e.movementY;
+      if (this.locked) {
+        this.mouse.dx += e.movementX;
+        this.mouse.dy += e.movementY;
+      } else if (this.dragging) {
+        // fallback: считаем дельту от прошлой позиции
+        this.mouse.dx += (e.clientX - this._lastMouse.x);
+        this.mouse.dy += (e.clientY - this._lastMouse.y);
+        this._lastMouse.x = e.clientX;
+        this._lastMouse.y = e.clientY;
+      }
     });
 
+    // === Click — двойная роль ===
+    // 1) Если PointerLock активен → это «взаимодействие»
+    // 2) Если нет → попытаться захватить курсор; если не получилось — игра
+    //    переходит в drag-режим (поворот мыши при зажатой ЛКМ)
     this.domElement.addEventListener('mousedown', (e) => {
-      if (!this.locked) return;
-      if (e.button === 0) this.click = true;
+      if (e.button !== 0) return;
+      if (this.locked) {
+        this.click = true;
+      } else {
+        // запомним позицию для drag-режима
+        this._lastMouse.x = e.clientX;
+        this._lastMouse.y = e.clientY;
+        this.dragging = true;
+        this.domElement.style.cursor = 'none';
+        // одновременно пробуем повторно захватить курсор
+        this.requestLock();
+      }
     });
+
+    this.domElement.addEventListener('mouseup', (e) => {
+      if (e.button !== 0) return;
+      if (this.dragging) {
+        this.dragging = false;
+        this.domElement.style.cursor = 'default';
+        // короткий клик без движения = взаимодействие
+        if (Math.abs(this.mouse.dx) < 4 && Math.abs(this.mouse.dy) < 4) {
+          this.click = true;
+        }
+      }
+    });
+
+    this.domElement.addEventListener('mouseleave', () => {
+      this.dragging = false;
+      this.domElement.style.cursor = 'default';
+    });
+
+    // Контекстное меню — отключаем, чтобы ПКМ не мешала
+    this.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
   requestLock() {
-    if (this.domElement.requestPointerLock) {
-      this.domElement.requestPointerLock();
-    }
+    try {
+      this.domElement.requestPointerLock?.();
+    } catch (_) { /* ignore */ }
   }
 
-  /** В конце кадра: вернуть и обнулить дельту мыши и флаг клика. */
   consume() {
     const dx = this.mouse.dx, dy = this.mouse.dy;
     this.mouse.dx = 0;
@@ -55,7 +112,6 @@ export class InputManager {
     return { dx, dy, click };
   }
 
-  /** WASD как Vector3 в плоскости (x,z) — относительно камеры. */
   getMoveVector() {
     const v = new THREE.Vector3(0, 0, 0);
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp'))    v.z -= 1;
