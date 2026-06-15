@@ -186,13 +186,13 @@ export class Elevator {
     this.cabinDoorRBody = this._makeKinematic(doorW, doorH, 0.05);
 
     // Свет в кабине
-    this.cabinLight = new THREE.PointLight(0xfff0d0, 30, 6, 2.0);
+    this.cabinLight = new THREE.PointLight(0xfff0d0, 80, 8, 2.0);
     this.cabinLight.position.set(0, H - 0.15, 0);
     this.cabinLight.castShadow = true;
     this.cabinLight.shadow.mapSize.set(512, 512);
     this.cabinLight.shadow.bias = -0.0008;
     this.cabin.add(this.cabinLight);
-    this.cabinLightBaseIntensity = 30;
+    this.cabinLightBaseIntensity = 80;
 
     // Плафон
     const shade = new THREE.Mesh(

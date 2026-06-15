@@ -20,7 +20,7 @@ export function createRenderer(canvasParent) {
   // PBR-конвейер
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 1.6;
 
   // Тени
   renderer.shadowMap.enabled = true;
