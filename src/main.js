@@ -68,6 +68,14 @@ startBtn.addEventListener('click', () => {
   game.start();
 
   // Отладочный HUD каждые 200мс
+  const keyEls = {
+    KeyW: document.getElementById('keys-w'),
+    KeyA: document.getElementById('keys-a'),
+    KeyS: document.getElementById('keys-s'),
+    KeyD: document.getElementById('keys-d')
+  };
+  const moveStatus = document.getElementById('move-status');
+
   setInterval(() => {
     if (!debugEl || !game) return;
     const p = game.player.body.position;
@@ -80,7 +88,23 @@ startBtn.addEventListener('click', () => {
       `keys ${keys || '(none)'}\n` +
       `lock ${game.input.locked ? 'YES' : 'no'}\n` +
       `act  ${game.acts.phase}`;
-  }, 200);
+
+    // Подсветка клавиш
+    for (const code in keyEls) {
+      if (game.input.keys.has(code)) keyEls[code].classList.add('active');
+      else keyEls[code].classList.remove('active');
+    }
+
+    // Статус движения
+    const horizSpeed = Math.hypot(v.x, v.z);
+    if (horizSpeed > 0.15) {
+      moveStatus.textContent = 'ИДЁТ →';
+      moveStatus.classList.add('walking');
+    } else {
+      moveStatus.textContent = 'СТОИТ';
+      moveStatus.classList.remove('walking');
+    }
+  }, 100);
 
   // Скрыть/показать debug по клавише `
   document.addEventListener('keydown', (e) => {

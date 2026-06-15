@@ -30,6 +30,8 @@ export class InputManager {
     ]);
 
     document.addEventListener('keydown', (e) => {
+      // Игнорируем Cmd/Ctrl-сочетания (Cmd+A, Cmd+R и т.п. не должны двигать игрока)
+      if (e.metaKey || e.ctrlKey) return;
       this.keys.add(e.code);
       if (GAME_KEYS.has(e.code)) e.preventDefault();
     }, { passive: false });

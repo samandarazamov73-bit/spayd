@@ -137,8 +137,10 @@ export class Game {
       interaction: this.interaction
     });
 
-    // ===== Окклюзия аудио (учёт стен между источником и слушателем) =====
-    this.audio.setOcclusionTester((src, lst) => this.hotel.isOccluded(src, lst));
+    // ===== Окклюзия аудио — ОТКЛЮЧЕНА для производительности =====
+    // (Раньше каждый кадр шёл raycast от каждого источника к слушателю.
+    //  В lite-режиме это лишняя нагрузка на CPU.)
+    // this.audio.setOcclusionTester((src, lst) => this.hotel.isOccluded(src, lst));
 
     // ===== Менеджер актов =====
     this.acts = new ActManager({

@@ -243,37 +243,34 @@ export class Hotel {
     sofaBack.position.set(3.5, 0.75, 0.7);
     g.add(sofaBack);
 
-    // === Освещение лобби ===
-    // 4 точечных источника под потолком
+    // Позиции потолочных «ламп» — только декор
     const lobbyLightPositions = [
       [-2, H - 0.15, 1],
       [ 2, H - 0.15, 1],
       [-2, H - 0.15, 5],
       [ 2, H - 0.15, 5]
     ];
+
+    // === Освещение лобби ===
+    // Только один HemisphereLight (очень дешёвый, без шейдера расстояний)
+    // — даёт приятную тёплую заливку без point lights.
     this.lobbyLights = [];
-    for (const [lx, ly, lz] of lobbyLightPositions) {
-      const lamp = new THREE.PointLight(0xffe0b0, 90, 14, 2.0);
-      lamp.position.set(lx, ly, lz);
-      lamp.castShadow = true;
-      lamp.shadow.mapSize.set(512, 512);
-      lamp.shadow.bias = -0.0008;
-      lamp.shadow.normalBias = 0.02;
-      lamp.shadow.radius = 4;
-      g.add(lamp);
+    {
+      const hemi = new THREE.HemisphereLight(0xffe7c0, 0x2a2018, 1.4);
+      hemi.position.set(0, H, (z0+z1)/2);
+      g.add(hemi);
+      this.lobbyLights.push(hemi);
+      this.lights.push(hemi);
 
-      // плафон
-      const shade = this._box(0.45, 0.05, 0.45, this.M.lampShade, { collide: false });
-      shade.position.copy(lamp.position);
-      shade.position.y -= 0.02;
-      g.add(shade);
-
-      this.lobbyLights.push(lamp);
-      this.lights.push(lamp);
+      // Декоративные плафоны на потолке — уже не светят, но создают вид
+      for (const [lx, ly, lz] of lobbyLightPositions) {
+        const shade = this._box(0.45, 0.05, 0.45, this.M.lampShade, { collide: false });
+        shade.position.set(lx, ly, lz);
+        g.add(shade);
+      }
     }
 
-    // Лёгкий ambient в лобби (заполняющий)
-    const amb = new THREE.AmbientLight(0x3c4045, 1.8);
+    const amb = new THREE.AmbientLight(0x453e35, 0.8);
     g.add(amb);
     this.lobbyAmbient = amb;
   }
@@ -428,7 +425,7 @@ export class Hotel {
       this._addBox(g, 0, this.DOOR_HEIGHT + overH/2, halfZ + 0.05, eo*2, overH, 0.1, M.wall);
     }
 
-    // === Освещение коридора: 3 люминесцентные лампы потолочные ===
+    // === Освещение коридора: HemisphereLight + декоративные люминесцентные трубки ===
     this.corridorLights = [];
     this.corridorTubes = [];
     for (const lz of [-4.5, 0, 4.5]) {
@@ -440,22 +437,18 @@ export class Hotel {
       g.add(tube);
       this.corridorTubes.push(tube);
 
-      const light = new THREE.PointLight(0xfff2d8, 80, 11, 2.0);
-      light.position.set(0, H - 0.12, lz);
-      light.castShadow = true;
-      light.shadow.mapSize.set(512, 512);
-      light.shadow.bias = -0.001;
-      light.shadow.normalBias = 0.02;
-      light.shadow.radius = 3;
-      g.add(light);
-      this.corridorLights.push(light);
-      this.lights.push(light);
-
       // Гул лампы — пространственный
       const hum = this.audio.attach('lampHum', tube, {
-        loop: true, volume: 0.10, refDistance: 0.6, rolloff: 2.5, maxDistance: 6, occludable: true
+        loop: true, volume: 0.06, refDistance: 0.6, rolloff: 2.5, maxDistance: 6, occludable: true
       });
       tube.userData.hum = hum;
+    }
+    {
+      const hemi = new THREE.HemisphereLight(0xfff2d8, 0x1c1812, 1.6);
+      hemi.position.set(0, H, 0);
+      g.add(hemi);
+      this.corridorLights.push(hemi);
+      this.lights.push(hemi);
     }
 
     // === Кадка / декор ===
@@ -581,28 +574,26 @@ export class Hotel {
 
     // Настольная лампа (на тумбочке)
     {
+      // Декоративный плафон на тумбочке (без point light — заменён на эмиссивный материал)
       const base = this._box(0.12, 0.05, 0.12, M.brushedMetal, { collide: false });
       base.position.set(this.phonePos.x + 0.15, 0.58, this.phonePos.z);
       g.add(base);
       const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.30, 8), M.brushedMetal);
       stand.position.set(this.phonePos.x + 0.15, 0.75, this.phonePos.z);
       g.add(stand);
+      // Плафон с эмиссивным материалом — «светится сам по себе»
       const shade = new THREE.Mesh(
         new THREE.CylinderGeometry(0.10, 0.13, 0.18, 16, 1, true),
-        M.lampShade
+        new THREE.MeshStandardMaterial({
+          color: 0xffe0a8, emissive: 0xffd070, emissiveIntensity: 1.6, roughness: 0.6
+        })
       );
       shade.position.set(this.phonePos.x + 0.15, 0.99, this.phonePos.z);
       g.add(shade);
 
-      const bedLight = new THREE.PointLight(0xffc080, 90, 9, 2.0);
-      bedLight.position.set(this.phonePos.x + 0.15, 0.95, this.phonePos.z);
-      bedLight.castShadow = true;
-      bedLight.shadow.mapSize.set(512, 512);
-      bedLight.shadow.bias = -0.0008;
-      bedLight.shadow.radius = 4;
-      g.add(bedLight);
-      this.bedLight = bedLight;
-      this.lights.push(bedLight);
+      // НИКАКОГО PointLight у кровати — комнату освещает HemisphereLight ниже.
+      // Сохраняем заглушку this.bedLight для совместимости с ActManager.
+      this.bedLight = { intensity: 1, color: new THREE.Color(0xffc080) };
     }
 
     // Стол с ТВ (напротив кровати, у east стены)
@@ -658,8 +649,13 @@ export class Hotel {
     this.bathroomDoorWidth = bathDoorHalfW * 2 - 0.02;
     this.bathroomDoorPos = new THREE.Vector3(bathDoorCenterX, this.FLOOR_11_Y + this.DOOR_HEIGHT/2, bathZ1 + 0.02);
 
-    // Ambient номера (тёплый заполняющий)
-    const amb = new THREE.AmbientLight(0x3a322a, 1.6);
+    // Освещение номера — тёплый HemisphereLight, без point lights
+    {
+      const hemi = new THREE.HemisphereLight(0xffe0a8, 0x1a1410, 1.6);
+      hemi.position.set((x0+x1)/2, H, (z0+z1)/2);
+      g.add(hemi);
+    }
+    const amb = new THREE.AmbientLight(0x3a302a, 0.9);
     g.add(amb);
     this.roomAmbient = amb;
 
