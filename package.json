@@ -1,0 +1,11 @@
+{
+  "name": "room-1107",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Browser-based first-person psychological horror built on Three.js + cannon-es.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "license": "MIT"
+}

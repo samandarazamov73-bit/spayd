@@ -1,90 +1,119 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spider-Man 2D | The Amazing Adventure</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROOM 1107</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+      color: #d8d8d8;
+      cursor: default;
+    }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; }
+
+    /* Diegetic crosshair: just a small dot, becomes a ring when interactable */
+    #crosshair {
+      position: fixed;
+      left: 50%; top: 50%;
+      width: 6px; height: 6px;
+      margin-left: -3px; margin-top: -3px;
+      border-radius: 50%;
+      background: rgba(230, 230, 230, 0.55);
+      box-shadow: 0 0 4px rgba(0,0,0,0.6);
+      pointer-events: none;
+      transition: transform 120ms ease, background 120ms ease, border 120ms ease;
+      z-index: 10;
+    }
+    #crosshair.hover {
+      width: 14px; height: 14px;
+      margin-left: -7px; margin-top: -7px;
+      background: transparent;
+      border: 1.5px solid rgba(255, 255, 255, 0.85);
+    }
+
+    /* Start screen */
+    #start-screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at center, #0a0a0a 0%, #000 80%);
+      z-index: 100;
+      transition: opacity 1.2s ease;
+      letter-spacing: 0.2em;
+    }
+    #start-screen h1 {
+      font-weight: 200; font-size: 28px; margin: 0 0 8px;
+      color: #c8c8c8;
+    }
+    #start-screen .sub {
+      font-size: 11px; color: #6a6a6a; margin-bottom: 40px;
+    }
+    #start-screen .keys {
+      font-size: 11px; color: #5a5a5a; margin-top: 30px;
+      line-height: 1.8;
+      text-align: center;
+    }
+    #start-button {
+      background: transparent;
+      border: 1px solid #444;
+      color: #c8c8c8;
+      padding: 14px 36px;
+      font-size: 12px;
+      letter-spacing: 0.3em;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+    #start-button:hover {
+      border-color: #aaa;
+      color: #fff;
+      background: rgba(255,255,255,0.04);
+    }
+
+    #loading {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #000; z-index: 200;
+      color: #555; font-size: 11px; letter-spacing: 0.4em;
+    }
+    .hidden { opacity: 0; pointer-events: none; }
+    .gone { display: none !important; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+    }
+  }
+  </script>
 </head>
 <body>
-    <!-- INTRO SCREEN -->
-    <div id="introScreen" class="screen active">
-        <div class="intro-content">
-            <div class="spider-logo">🕷️</div>
-            <h1 class="title-main">THE AMAZING</h1>
-            <h1 class="title-sub">SPIDER-MAN</h1>
-            <p class="title-desc">2D Adventure</p>
-            <div class="story-intro">
-                <p>Нью-Йорк под угрозой. Зелёный Гоблин похитил MJ.<br>
-                Только Человек-Паук может спасти её!</p>
-            </div>
-            <button class="btn-start" onclick="startGame()">▶ НАЧАТЬ ИГРУ</button>
-            <div class="controls-hint">
-                <span>← → Движение</span>
-                <span>↑ / SPACE Прыжок</span>
-                <span>Z Паутина</span>
-                <span>X Удар</span>
-            </div>
-        </div>
+  <div id="loading">ЗАГРУЗКА</div>
+
+  <div id="start-screen" class="gone">
+    <h1>R O O M&nbsp;&nbsp;1 1 0 7</h1>
+    <div class="sub">a slow-burn experience</div>
+    <button id="start-button">ВОЙТИ</button>
+    <div class="keys">
+      WASD &mdash; движение &nbsp;&nbsp;|&nbsp;&nbsp; МЫШЬ &mdash; обзор<br/>
+      ЛКМ &mdash; взаимодействовать &nbsp;&nbsp;|&nbsp;&nbsp; SHIFT &mdash; ускоренный шаг<br/>
+      ESC &mdash; освободить курсор<br/><br/>
+      <em style="color:#3a3a3a;">наушники рекомендуются</em>
     </div>
+  </div>
 
-    <!-- DIALOGUE SCREEN -->
-    <div id="dialogueBox" class="dialogue-box hidden">
-        <div class="dialogue-avatar" id="dialogueAvatar">🕷️</div>
-        <div class="dialogue-content">
-            <div class="dialogue-name" id="dialogueName">Spider-Man</div>
-            <div class="dialogue-text" id="dialogueText"></div>
-        </div>
-        <button class="dialogue-next" onclick="nextDialogue()">▶</button>
-    </div>
+  <div id="app"></div>
+  <div id="crosshair"></div>
 
-    <!-- GAME UI -->
-    <div id="gameUI" class="game-ui hidden">
-        <div class="ui-left">
-            <div class="health-bar">
-                <span>❤️ HP</span>
-                <div class="bar-outer"><div class="bar-inner" id="hpBar"></div></div>
-                <span id="hpText">100</span>
-            </div>
-            <div class="health-bar">
-                <span>🕸️ WEB</span>
-                <div class="bar-outer"><div class="bar-inner web" id="webBar"></div></div>
-                <span id="webText">100</span>
-            </div>
-        </div>
-        <div class="ui-center">
-            <div class="level-name" id="levelName">Глава 1: Начало</div>
-        </div>
-        <div class="ui-right">
-            <div class="score">⭐ <span id="scoreText">0</span></div>
-            <div class="enemies-left">👿 <span id="enemiesText">0</span></div>
-        </div>
-    </div>
-
-    <!-- CANVAS -->
-    <canvas id="gameCanvas"></canvas>
-
-    <!-- GAME OVER -->
-    <div id="gameOverScreen" class="screen hidden">
-        <div class="go-content">
-            <div class="go-emoji">💀</div>
-            <h2>GAME OVER</h2>
-            <p id="goMessage">Нью-Йорк проиграл...</p>
-            <button class="btn-start" onclick="restartGame()">↺ ЗАНОВО</button>
-        </div>
-    </div>
-
-    <!-- WIN SCREEN -->
-    <div id="winScreen" class="screen hidden">
-        <div class="go-content">
-            <div class="go-emoji">🕷️</div>
-            <h2>ПОБЕДА!</h2>
-            <p>Нью-Йорк спасён! MJ в безопасности!<br>Зелёный Гоблин повержен!</p>
-            <div class="win-score">Очки: <span id="finalScore">0</span></div>
-            <button class="btn-start" onclick="restartGame()">↺ ИГРАТЬ СНОВА</button>
-        </div>
-    </div>
-
-    <script src="game.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
