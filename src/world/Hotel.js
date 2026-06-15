@@ -253,7 +253,7 @@ export class Hotel {
     ];
     this.lobbyLights = [];
     for (const [lx, ly, lz] of lobbyLightPositions) {
-      const lamp = new THREE.PointLight(0xffe0b0, 1.6, 8, 2.0);
+      const lamp = new THREE.PointLight(0xffe0b0, 35, 12, 2.0);
       lamp.position.set(lx, ly, lz);
       lamp.castShadow = true;
       lamp.shadow.mapSize.set(512, 512);
@@ -273,7 +273,7 @@ export class Hotel {
     }
 
     // Лёгкий ambient в лобби (заполняющий)
-    const amb = new THREE.AmbientLight(0x202428, 0.20);
+    const amb = new THREE.AmbientLight(0x303438, 0.9);
     g.add(amb);
     this.lobbyAmbient = amb;
   }
@@ -440,7 +440,7 @@ export class Hotel {
       g.add(tube);
       this.corridorTubes.push(tube);
 
-      const light = new THREE.PointLight(0xfff2d8, 1.4, 6, 2.0);
+      const light = new THREE.PointLight(0xfff2d8, 28, 9, 2.0);
       light.position.set(0, H - 0.12, lz);
       light.castShadow = true;
       light.shadow.mapSize.set(512, 512);
@@ -464,7 +464,7 @@ export class Hotel {
     g.add(planter);
 
     // Лёгкий ambient
-    const amb = new THREE.AmbientLight(0x1a1812, 0.12);
+    const amb = new THREE.AmbientLight(0x2a2620, 0.6);
     g.add(amb);
     this.corridorAmbient = amb;
   }
@@ -594,7 +594,7 @@ export class Hotel {
       shade.position.set(this.phonePos.x + 0.15, 0.99, this.phonePos.z);
       g.add(shade);
 
-      const bedLight = new THREE.PointLight(0xffc080, 1.4, 4, 2.0);
+      const bedLight = new THREE.PointLight(0xffc080, 32, 7, 2.0);
       bedLight.position.set(this.phonePos.x + 0.15, 0.95, this.phonePos.z);
       bedLight.castShadow = true;
       bedLight.shadow.mapSize.set(512, 512);
@@ -658,8 +658,8 @@ export class Hotel {
     this.bathroomDoorWidth = bathDoorHalfW * 2 - 0.02;
     this.bathroomDoorPos = new THREE.Vector3(bathDoorCenterX, this.FLOOR_11_Y + this.DOOR_HEIGHT/2, bathZ1 + 0.02);
 
-    // Ambient номера (очень слабый — комната освещена лампой и ТВ)
-    const amb = new THREE.AmbientLight(0x1a1614, 0.10);
+    // Ambient номера (тёплый заполняющий)
+    const amb = new THREE.AmbientLight(0x2a2218, 0.55);
     g.add(amb);
     this.roomAmbient = amb;
 

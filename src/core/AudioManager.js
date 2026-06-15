@@ -65,6 +65,31 @@ export class AudioManager {
     return buf;
   }
 
+  /**
+   * Бесшовный лооп: сглаживает первые и последние N сэмплов кросс-фейдом,
+   * чтобы на границе луппа не было щелчков. Применяется к буферу in-place.
+   */
+  _seamlessLoop(buf, fadeMs = 80) {
+    const sr = this.ctx.sampleRate;
+    const fade = Math.min(Math.floor(sr * fadeMs / 1000), Math.floor(buf.length / 4));
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+      const d = buf.getChannelData(ch);
+      const N = d.length;
+      // Кросс-фейд: первые fade сэмплов = mix(end, start)
+      for (let i = 0; i < fade; i++) {
+        const k = i / fade;             // 0..1
+        const headSample = d[i];
+        const tailSample = d[N - fade + i];
+        d[i] = headSample * k + tailSample * (1 - k);
+      }
+      // И симметрично затухаем хвост в ту же смесь — так стык станет идентичным
+      for (let i = 0; i < fade; i++) {
+        d[N - fade + i] = d[i];
+      }
+    }
+    return buf;
+  }
+
   _tone(seconds, freqFn, ampFn, harmonics = 1) {
     const sr = this.ctx.sampleRate;
     const len = Math.floor(sr * seconds);
@@ -87,17 +112,17 @@ export class AudioManager {
   _buildBuffers() {
     // === Гул вентиляции / room tone (бесконечный лооп) ===
     // Коричневый шум + мягкий бэндпасс — глубокий низ комнаты.
-    this.buffers.roomTone = this._noise(8.0, 'brown');
+    this.buffers.roomTone = this._seamlessLoop(this._noise(8.0, 'brown'), 200);
 
     // === Гул люминесцентной лампы (60Hz + гармоники + лёгкое биение) ===
-    this.buffers.lampHum = this._tone(
+    this.buffers.lampHum = this._seamlessLoop(this._tone(
       4.0,
-      () => 60 + Math.sin(performance.now() * 0.001) * 0.5,
-      (t) => 0.35 * (1 + 0.05 * Math.sin(2 * Math.PI * 7 * t)),
+      () => 60,
+      (t) => 0.18 * (1 + 0.05 * Math.sin(2 * Math.PI * 7 * t)),
       4
-    );
+    ), 100);
 
-    // === ТВ — высокий писк CRT 15.7кГц + статика ===
+    // === ТВ — мягкий статичный гул (без резких 15.7кГц) ===
     this.buffers.tvHum = (() => {
       const sr = this.ctx.sampleRate;
       const len = Math.floor(sr * 4);
@@ -105,11 +130,12 @@ export class AudioManager {
       const d = buf.getChannelData(0);
       for (let i = 0; i < len; i++) {
         const t = i / sr;
-        const flyback = 0.06 * Math.sin(2 * Math.PI * 15734 * t);
-        const noise = (Math.random() * 2 - 1) * 0.05;
-        d[i] = flyback + noise;
+        // тёплый низкочастотный гул + лёгкая статика
+        const hum = 0.06 * Math.sin(2 * Math.PI * 120 * t);
+        const noise = (Math.random() * 2 - 1) * 0.025;
+        d[i] = hum + noise;
       }
-      return buf;
+      return this._seamlessLoop(buf, 150);
     })();
 
     // === Шаг (по ковру, мягкий) ===
@@ -196,12 +222,12 @@ export class AudioManager {
     })();
 
     // === Гул мотора лифта / трос (низкий дрон) ===
-    this.buffers.elevatorMotor = this._tone(
+    this.buffers.elevatorMotor = this._seamlessLoop(this._tone(
       4.0,
-      (t) => 55 + 4 * Math.sin(2 * Math.PI * 0.7 * t),
-      () => 0.55,
-      6
-    );
+      () => 55,
+      () => 0.35,
+      4
+    ), 150);
 
     // === Натяжение троса (металлический скрип) ===
     this.buffers.cableTension = (() => {
@@ -290,12 +316,12 @@ export class AudioManager {
     })();
 
     // === Низкочастотный гул-искажение (финальный) ===
-    this.buffers.deepDrone = this._tone(
+    this.buffers.deepDrone = this._seamlessLoop(this._tone(
       6.0,
-      (t) => 28 + 6 * Math.sin(2*Math.PI*0.13*t),
-      () => 0.7,
+      () => 32,
+      () => 0.45,
       3
-    );
+    ), 200);
 
     // === Искрение / треск ламп ===
     this.buffers.sparkCrackle = (() => {

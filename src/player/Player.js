@@ -129,10 +129,10 @@ export class Player {
     const isRunning = this.input.isShift() && moveVec.lengthSq() > 0;
     const targetSpeed = (isRunning ? this.runSpeed : this.walkSpeed) * moveVec.length();
 
-    // направление в мировых координатах
+    // направление в мировых координатах (Three.js Y-rotation matrix)
     const cosY = Math.cos(this.yaw), sinY = Math.sin(this.yaw);
-    const wx = moveVec.x * cosY - moveVec.z * sinY;
-    const wz = moveVec.x * sinY + moveVec.z * cosY;
+    const wx =  moveVec.x * cosY + moveVec.z * sinY;
+    const wz = -moveVec.x * sinY + moveVec.z * cosY;
 
     const dir = new THREE.Vector3(wx, 0, wz);
     if (dir.lengthSq() > 0) dir.normalize();

@@ -36,7 +36,7 @@ export class Game {
     // ===== THREE сцена =====
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x000000);
-    this.scene.fog = new THREE.FogExp2(0x000000, 0.025);
+    this.scene.fog = new THREE.FogExp2(0x000000, 0.012);
 
     this.camera = new THREE.PerspectiveCamera(
       72, window.innerWidth / window.innerHeight, 0.05, 80
@@ -84,7 +84,7 @@ export class Game {
     // Стартовая позиция игрока — в номере 1107
     const start = this.hotel.getPlayerStart();
     this.player.setPosition(start.x, start.y, start.z);
-    this.player.setYaw(Math.PI/2);   // лицом к ТВ/окну (вглубь номера)
+    this.player.setYaw(-Math.PI/2);  // лицом на восток — к ТВ и двери в коридор
 
     // ===== Лифт =====
     this.elevator = new Elevator({

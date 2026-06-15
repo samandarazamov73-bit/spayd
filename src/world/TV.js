@@ -64,7 +64,7 @@ export class TV {
     this.group.add(stand);
 
     // PointLight от экрана
-    this.light = new THREE.PointLight(0x88a0ff, 0.0, 5.5, 2.0);
+    this.light = new THREE.PointLight(0x88a0ff, 0.0, 7, 2.0);
     this.light.castShadow = true;
     this.light.shadow.mapSize.set(512, 512);
     this.light.shadow.bias = -0.0008;
@@ -96,7 +96,7 @@ export class TV {
     // Звук ТВ — пространственный, hum + видео-аудио (видео не играем через WebAudio,
     // но прибавим короткий tvHum для CRT-присутствия)
     this.tvHum = this.audio.attach('tvHum', this.group, {
-      loop: true, volume: 0, refDistance: 0.6, rolloff: 1.8, maxDistance: 8, occludable: true
+      loop: true, volume: 0, refDistance: 0.6, rolloff: 1.8, maxDistance: 6, occludable: true
     });
     try { this.tvHum.play(); } catch(_) {}
   }
@@ -125,7 +125,7 @@ export class TV {
       toneMapped: false   // экран эмиссивный
     });
 
-    try { this.tvHum.setVolume(0.20); } catch(_) {}
+    try { this.tvHum.setVolume(0.10); } catch(_) {}
   }
 
   off() {
@@ -172,9 +172,9 @@ export class TV {
       } catch (_) { /* CORS sometimes — просто игнор */ }
     }
 
-    // Свет от ТВ
+    // Свет от ТВ — масштабируем до реалистичных физических величин
     const lum = 0.299 * this._lastAvgColor.r + 0.587 * this._lastAvgColor.g + 0.114 * this._lastAvgColor.b;
-    let intensity = 0.6 + lum * 2.4;
+    let intensity = (0.6 + lum * 2.4) * 12;     // ×12 чтобы попасть в физический диапазон
     if (this.glitched) {
       // мерцание + дропы
       const t = performance.now() * 0.001;

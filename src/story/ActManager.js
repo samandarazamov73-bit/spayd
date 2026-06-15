@@ -38,7 +38,7 @@ export class ActManager {
 
     // Глобальный «room tone» — фоновый гул вентиляции
     this.roomTone = this.audio.attach('roomTone', this.player.root, {
-      loop: true, volume: 0.35, refDistance: 1, rolloff: 0.0, maxDistance: 50
+      loop: true, volume: 0.18, refDistance: 1, rolloff: 0.0, maxDistance: 50
     });
     try { this.roomTone.play(); } catch(_) {}
 
@@ -304,7 +304,7 @@ export class ActManager {
     this.tv.group.getWorldPosition(tvWorld);
     const d = p.distanceTo(tvWorld);
     if (this.roomTone) {
-      try { this.roomTone.setVolume(0.32 + Math.max(0, 1 - d/4) * 0.05); } catch(_) {}
+      try { this.roomTone.setVolume(0.16 + Math.max(0, 1 - d/4) * 0.04); } catch(_) {}
     }
   }
 
@@ -366,10 +366,10 @@ export class ActManager {
     // Гасим лобби-лампы до 30% и охлаждаем оттенок
     for (const lamp of this.hotel.lobbyLights) {
       lamp.userData._origIntensity = lamp.intensity;
-      lamp.intensity *= 0.30;
+      lamp.intensity *= 0.35;
       lamp.color.setHex(0xc6c8d0);
     }
-    this.hotel.lobbyAmbient.intensity = 0.04;
+    this.hotel.lobbyAmbient.intensity = 0.30;
 
     // Пакет на тумбе исчезает (его уже нет с акта 1)
     if (this.hotel.foodBag) this.hotel.foodBag.visible = false;
@@ -431,7 +431,7 @@ export class ActManager {
       light.userData._origColor = light.color.getHex();
       light.userData._origIntensity = light.intensity;
       light.color.setHex(0xff1010);
-      light.intensity = 0.55;
+      light.intensity = 10;
     }
     for (const tube of this.hotel.corridorTubes) {
       tube.material = tube.material.clone();
@@ -470,7 +470,7 @@ export class ActManager {
 
     // Гасим лампу у кровати и оставляем только цвет ТВ
     if (this.hotel.bedLight) {
-      this.hotel.bedLight.intensity = 0.05;
+      this.hotel.bedLight.intensity = 1.5;
       this.hotel.bedLight.color.setHex(0x442020);
     }
 
